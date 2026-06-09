@@ -1,0 +1,166 @@
+
+<h2 class="sr-only">Análisis de frecuencias y concurrencias de categorías en comentarios sobre Cepeda</h2>
+
+<style>
+* { box-sizing: border-box; }
+.tabs { display: flex; gap: 4px; padding: 0 0 16px; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 20px; }
+.tab { font-size: 13px; padding: 6px 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-secondary); cursor: pointer; }
+.tab.active { background: var(--color-background-secondary); color: var(--color-text-primary); font-weight: 500; }
+.section { display: none; }
+.section.active { display: block; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+.metric { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 14px; }
+.metric-num { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.metric-lbl { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.chart-wrap { position: relative; width: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 12px; color: var(--color-text-secondary); }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.section-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 12px; }
+.co-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.co-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+.co-pair { font-size: 12px; color: var(--color-text-secondary); line-height: 1.4; }
+.co-pair strong { color: var(--color-text-primary); font-weight: 500; }
+.co-count { font-size: 18px; font-weight: 500; color: var(--color-text-primary); flex-shrink: 0; margin-left: 8px; }
+.co-bar { height: 3px; background: var(--color-border-tertiary); border-radius: 2px; margin-top: 6px; }
+.co-bar-fill { height: 3px; border-radius: 2px; background: #378ADD; }
+</style>
+
+<div style="padding: 16px 0 0;">
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-num">149</div><div class="metric-lbl">Comentarios analizados</div></div>
+    <div class="metric"><div class="metric-num">7</div><div class="metric-lbl">Categorías principales</div></div>
+    <div class="metric"><div class="metric-num">33</div><div class="metric-lbl">Subcategorías únicas</div></div>
+    <div class="metric"><div class="metric-num">20</div><div class="metric-lbl">Pares de concurrencia</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('cats')">Categorías</button>
+    <button class="tab" onclick="showTab('subs')">Subcategorías</button>
+    <button class="tab" onclick="showTab('co')">Concurrencias</button>
+  </div>
+
+  <div id="cats" class="section active">
+    <p class="section-title">Frecuencia de categorías principales (n = menciones totales)</p>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:#378ADD"></span>Instagram</span>
+      <span style="color:var(--color-text-tertiary);font-size:11px;">* una entrada puede tener múltiples categorías</span>
+    </div>
+    <div class="chart-wrap" style="height: 320px;"><canvas id="catChart" role="img" aria-label="Frecuencia de 7 categorías principales. Inseguridad e impunidad es la más frecuente con 46 menciones.">Inseguridad e impunidad: 46, Rechazo ideológico-identitario: 41, Incapacidad para gobernar: 34, Desconfianza moral: 33, Deterioro económico: 24, Rechazo al gobierno Petro: 24, Autoritarismo: 17.</canvas></div>
+  </div>
+
+  <div id="subs" class="section">
+    <p class="section-title">Subcategorías más frecuentes (top 20)</p>
+    <div class="chart-wrap" style="height: 660px;"><canvas id="subChart" role="img" aria-label="Top 20 subcategorías. Cercanía con guerrillas y Petro 2.0 son las más frecuentes con 26 menciones cada una.">Cercanía con guerrillas: 26, Petro 2.0: 26, Hipocresía: 21, Paz total: 19, Falta de liderazgo: 14, Venezuela: 14, Falta de propuestas: 14, Permanencia en el poder: 13, No desarrollo económico: 12, Falta de experiencia: 11, Corrupción: 10, Comunismo: 10, Desconfianza: 8, Rechazo a la izquierda: 8, Antiuribismo: 8, Política de polarización: 8, Camiseta selección: 8, Constituyente: 7, Ambientalismo inadecuado: 7, Déficit e inflación: 6.</canvas></div>
+  </div>
+
+  <div id="co" class="section">
+    <p class="section-title">Concurrencias — pares de categorías que aparecen juntas en un mismo comentario</p>
+    <div class="co-grid" id="co-grid"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const CATS = ['Inseguridad e impunidad','Rechazo ideológico-identitario','Incapacidad para gobernar','Desconfianza moral','Deterioro económico','Rechazo al gobierno Petro','Autoritarismo'];
+const CAT_VALS = [46, 41, 34, 33, 24, 24, 17];
+const CAT_COLORS = ['#185FA5','#3B6D11','#993C1D','#854F0B','#534AB7','#0F6E56','#A32D2D'];
+
+const SUBS = ['Cercanía con guerrillas','Petro 2.0','Hipocresía','Paz total','Falta de liderazgo','Venezuela','Falta de propuestas','Permanencia en el poder','No desarrollo económico','Falta de experiencia','Corrupción','Comunismo','Desconfianza','Rechazo a la izquierda','Antiuribismo','Política de polarización','Camiseta selección','Constituyente','Ambientalismo inadecuado','Déficit e inflación'];
+const SUB_VALS = [26,26,21,19,14,14,14,13,12,11,10,10,8,8,8,8,8,7,7,6];
+
+const CO_PAIRS = [
+  {a:'Desconfianza moral', b:'Rechazo ideológico-identitario', n:10},
+  {a:'Deterioro económico', b:'Rechazo ideológico-identitario', n:8},
+  {a:'Inseguridad e impunidad', b:'Rechazo al gobierno Petro', n:8},
+  {a:'Autoritarismo', b:'Rechazo ideológico-identitario', n:7},
+  {a:'Incapacidad para gobernar', b:'Rechazo ideológico-identitario', n:7},
+  {a:'Desconfianza moral', b:'Rechazo al gobierno Petro', n:7},
+  {a:'Autoritarismo', b:'Deterioro económico', n:6},
+  {a:'Desconfianza moral', b:'Deterioro económico', n:6},
+  {a:'Deterioro económico', b:'Incapacidad para gobernar', n:6},
+  {a:'Desconfianza moral', b:'Inseguridad e impunidad', n:5},
+  {a:'Deterioro económico', b:'Inseguridad e impunidad', n:5},
+  {a:'Desconfianza moral', b:'Incapacidad para gobernar', n:5},
+  {a:'Deterioro económico', b:'Rechazo al gobierno Petro', n:5},
+  {a:'Autoritarismo', b:'Desconfianza moral', n:4},
+  {a:'Rechazo al gobierno Petro', b:'Rechazo ideológico-identitario', n:4},
+  {a:'Autoritarismo', b:'Inseguridad e impunidad', n:3},
+  {a:'Incapacidad para gobernar', b:'Inseguridad e impunidad', n:3},
+  {a:'Inseguridad e impunidad', b:'Rechazo ideológico-identitario', n:3},
+  {a:'Autoritarismo', b:'Rechazo al gobierno Petro', n:1},
+  {a:'Incapacidad para gobernar', b:'Rechazo al gobierno Petro', n:1},
+];
+
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['cats','subs','co'][i]===id));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+const textColor = isDark ? '#aaa' : '#888';
+
+new Chart(document.getElementById('catChart'), {
+  type: 'bar',
+  data: {
+    labels: CATS,
+    datasets: [{
+      data: CAT_VALS,
+      backgroundColor: CAT_COLORS,
+      borderRadius: 4,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.raw + ' menciones' } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 12 } } },
+      y: { grid: { display: false }, ticks: { color: isDark ? '#ccc' : '#444', font: { size: 12 } } }
+    }
+  }
+});
+
+new Chart(document.getElementById('subChart'), {
+  type: 'bar',
+  data: {
+    labels: SUBS,
+    datasets: [{
+      data: SUB_VALS,
+      backgroundColor: '#378ADD',
+      borderRadius: 3,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.raw + ' menciones' } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 12 } } },
+      y: { grid: { display: false }, ticks: { color: isDark ? '#ccc' : '#444', font: { size: 11 } } }
+    }
+  }
+});
+
+const maxN = CO_PAIRS[0].n;
+const grid = document.getElementById('co-grid');
+CO_PAIRS.forEach(p => {
+  const pct = Math.round(p.n / maxN * 100);
+  const card = document.createElement('div');
+  card.className = 'co-card';
+  card.style.flexDirection = 'column';
+  card.style.alignItems = 'flex-start';
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+      <div class="co-pair"><strong>${p.a}</strong><br>+ ${p.b}</div>
+      <div class="co-count">${p.n}</div>
+    </div>
+    <div class="co-bar" style="width:100%;margin-top:8px;"><div class="co-bar-fill" style="width:${pct}%"></div></div>
+  `;
+  grid.appendChild(card);
+});
+</script>
